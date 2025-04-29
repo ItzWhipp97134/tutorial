@@ -1,3 +1,7 @@
+-- Box ESP Script
+-- Made for educational purposes
+
+-- Ensure getgenv().esp is always defined with defaults
 getgenv().esp = getgenv().esp or {
     enabled = false,
     outlineColor = Color3.fromRGB(255, 255, 255),
@@ -30,16 +34,11 @@ end
 
 local function createBox(player)
     local box = Drawing.new("Square")
-    local fill = Drawing.new("Square")
-    fill.Thickness = 1
-    fill.Filled = true
-    fill.Visible = false
-    fill.ZIndex = 1
     box.Thickness = 2
     box.Filled = false
     box.Visible = false
     box.ZIndex = 2
-    espObjects[player] = { box = box, fill = fill }
+    espObjects[player] = { box = box }
 end
 
 local function removeBox(player)
@@ -55,7 +54,6 @@ local function updateEsp(player)
     if not getgenv().esp.enabled then
         if espObjects[player] then
             espObjects[player].box.Visible = false
-            espObjects[player].fill.Visible = false
         end
         return
     end
@@ -63,14 +61,12 @@ local function updateEsp(player)
     if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then
         if espObjects[player] then
             espObjects[player].box.Visible = false
-            espObjects[player].fill.Visible = false
         end
         return
     end
     if getgenv().esp.teamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
         if espObjects[player] then
             espObjects[player].box.Visible = false
-            espObjects[player].fill.Visible = false
         end
         return
     end
@@ -91,18 +87,12 @@ local function updateEsp(player)
     if not onScreen then
         if espObjects[player] then
             espObjects[player].box.Visible = false
-            espObjects[player].fill.Visible = false
         end
         return
     end
     local boxSize = Vector2.new(maxX - minX, maxY - minY)
     local boxPosition = Vector2.new(minX, minY)
     if espObjects[player] then
-        espObjects[player].fill.Size = boxSize
-        espObjects[player].fill.Position = boxPosition
-        espObjects[player].fill.Color = getgenv().esp.fillColor
-        espObjects[player].fill.Transparency = getgenv().esp.fillTransparency
-        espObjects[player].fill.Visible = true
         espObjects[player].box.Size = boxSize
         espObjects[player].box.Position = boxPosition
         espObjects[player].box.Color = getgenv().esp.outlineColor
