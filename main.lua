@@ -1,10 +1,14 @@
+-- Tutorial Box ESP Script
+-- Made for educational purposes
+
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
+-- Initialize ESP settings
 getgenv().esp = {
-    enabled = false,
+    enabled = false,  -- ESP starts disabled
     outlineColor = Color3.fromRGB(255, 255, 255),
     fillColor = Color3.fromRGB(0, 0, 0),
     fillTransparency = 0.5,
@@ -12,21 +16,25 @@ getgenv().esp = {
     teamCheck = false
 }
 
+-- Store our drawing objects
 local espObjects = {}
 
 local function createBox(player)
+    -- Create box components
     local box = Drawing.new("Square")
     local fill = Drawing.new("Square")
     
+    -- Set default properties for fill
     fill.Thickness = 1
     fill.Filled = true
     fill.Visible = false
-    fill.ZIndex = 1  
+    fill.ZIndex = 1  -- Make fill render behind outline
     
-    box.Thickness = 2  
+    -- Set default properties for outline
+    box.Thickness = 2  -- Increased thickness for better visibility
     box.Filled = false
     box.Visible = false
-    box.ZIndex = 2  
+    box.ZIndex = 2  -- Make outline render in front
     
     espObjects[player] = {
         box = box,
@@ -45,7 +53,7 @@ local function removeBox(player)
     end
 end
 
-
+-- Update ESP for a player
 local function updateEsp(player)
     if not getgenv().esp.enabled then
         if espObjects[player] then
@@ -64,6 +72,7 @@ local function updateEsp(player)
         return
     end
     
+    -- Team Check
     if getgenv().esp.teamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
         if espObjects[player] then
             espObjects[player].box.Visible = false
@@ -78,6 +87,7 @@ local function updateEsp(player)
     
     if not hrp or not head then return end
     
+    -- Calculate box size and position
     local hrpPos, hrpOnScreen = Camera:WorldToViewportPoint(hrp.Position)
     if not hrpOnScreen then
         if espObjects[player] then
@@ -87,29 +97,32 @@ local function updateEsp(player)
         return
     end
     
-    local headPos = Camera:WorldToViewportPoint(head.Position + Vector3.new(0, 0.5, 0))
-    local legPos = Camera:WorldToViewportPoint(hrp.Position - Vector3.new(0, 3, 0))
+    -- Get character dimensions
+    local topPosition = Camera:WorldToViewportPoint((head.CFrame * CFrame.new(0, 1, 0)).Position)
+    local bottomPosition = Camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(0, -3.5, 0)).Position)
+    local radius = math.abs(topPosition.Y - bottomPosition.Y) / 2
+    local size = Vector2.new(radius * 1.5, radius * 2)
+    local position = Vector2.new(hrpPos.X - size.X / 2, hrpPos.Y - size.Y / 2)
     
-    local boxHeight = math.max(headPos.Y - legPos.Y, 10)
-    local boxWidth = math.max(1000 / hrpPos.Z, 10)
-    local boxSize = Vector2.new(boxWidth, boxHeight)
-    local boxPosition = Vector2.new(hrpPos.X - boxSize.X / 2, hrpPos.Y - boxSize.Y / 2)
-    
+    -- Update ESP objects
     if espObjects[player] then
-        espObjects[player].fill.Size = boxSize
-        espObjects[player].fill.Position = boxPosition
+        -- Update fill
+        espObjects[player].fill.Size = size
+        espObjects[player].fill.Position = position
         espObjects[player].fill.Color = getgenv().esp.fillColor
         espObjects[player].fill.Transparency = getgenv().esp.fillTransparency
         espObjects[player].fill.Visible = true
         
-        espObjects[player].box.Size = boxSize
-        espObjects[player].box.Position = boxPosition
+        -- Update outline
+        espObjects[player].box.Size = size
+        espObjects[player].box.Position = position
         espObjects[player].box.Color = getgenv().esp.outlineColor
         espObjects[player].box.Transparency = getgenv().esp.outlineTransparency
         espObjects[player].box.Visible = true
     end
 end
 
+-- Player handling
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then
         createBox(player)
@@ -120,12 +133,14 @@ Players.PlayerRemoving:Connect(function(player)
     removeBox(player)
 end)
 
+-- Create boxes for existing players
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         createBox(player)
     end
 end
 
+-- Update loop
 RunService.RenderStepped:Connect(function()
     for _, player in ipairs(Players:GetPlayers()) do
         if player ~= LocalPlayer then
@@ -134,6 +149,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- Clean up on script end
 game:GetService("CoreGui").ChildRemoved:Connect(function(child)
     if child == script then
         for _, player in ipairs(Players:GetPlayers()) do
@@ -141,3 +157,6 @@ game:GetService("CoreGui").ChildRemoved:Connect(function(child)
         end
     end
 end)
+
+print("Tutorial Box ESP loaded! Use getgenv().esp to modify settings.")
+print("Example: getgenv().esp.enabled = true") 
