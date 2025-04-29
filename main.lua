@@ -1,12 +1,8 @@
--- Tutorial Box ESP Script
--- Made for educational purposes
-
--- Ensure getgenv().esp is always defined with defaults
 getgenv().esp = getgenv().esp or {
     enabled = false,
     outlineColor = Color3.fromRGB(255, 255, 255),
     fillColor = Color3.fromRGB(0, 0, 0),
-    fillTransparency = 0.5,
+    fillTransparency = 1,
     outlineTransparency = 0,
     teamCheck = false
 }
@@ -15,6 +11,8 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
+
+local espObjects = {}
 
 local function getBoundingBoxCorners(model)
     local cframe, size = model:GetBoundingBox()
@@ -30,6 +28,29 @@ local function getBoundingBoxCorners(model)
     return corners
 end
 
+local function createBox(player)
+    local box = Drawing.new("Square")
+    local fill = Drawing.new("Square")
+    fill.Thickness = 1
+    fill.Filled = true
+    fill.Visible = false
+    fill.ZIndex = 1
+    box.Thickness = 2
+    box.Filled = false
+    box.Visible = false
+    box.ZIndex = 2
+    espObjects[player] = { box = box, fill = fill }
+end
+
+local function removeBox(player)
+    if espObjects[player] then
+        for _, drawing in pairs(espObjects[player]) do
+            if drawing then drawing:Remove() end
+        end
+        espObjects[player] = nil
+    end
+end
+
 local function updateEsp(player)
     if not getgenv().esp.enabled then
         if espObjects[player] then
@@ -38,7 +59,6 @@ local function updateEsp(player)
         end
         return
     end
-
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then
         if espObjects[player] then
@@ -47,7 +67,6 @@ local function updateEsp(player)
         end
         return
     end
-
     if getgenv().esp.teamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
         if espObjects[player] then
             espObjects[player].box.Visible = false
@@ -55,13 +74,10 @@ local function updateEsp(player)
         end
         return
     end
-
-    -- Get all 8 corners of the bounding box
     local corners = getBoundingBoxCorners(character)
     local minX, minY = math.huge, math.huge
     local maxX, maxY = -math.huge, -math.huge
     local onScreen = false
-
     for _, corner in ipairs(corners) do
         local screenPos, visible = Camera:WorldToViewportPoint(corner)
         if visible then
@@ -72,7 +88,6 @@ local function updateEsp(player)
             maxY = math.max(maxY, screenPos.Y)
         end
     end
-
     if not onScreen then
         if espObjects[player] then
             espObjects[player].box.Visible = false
@@ -80,17 +95,14 @@ local function updateEsp(player)
         end
         return
     end
-
     local boxSize = Vector2.new(maxX - minX, maxY - minY)
     local boxPosition = Vector2.new(minX, minY)
-
     if espObjects[player] then
         espObjects[player].fill.Size = boxSize
         espObjects[player].fill.Position = boxPosition
         espObjects[player].fill.Color = getgenv().esp.fillColor
         espObjects[player].fill.Transparency = getgenv().esp.fillTransparency
         espObjects[player].fill.Visible = true
-
         espObjects[player].box.Size = boxSize
         espObjects[player].box.Position = boxPosition
         espObjects[player].box.Color = getgenv().esp.outlineColor
@@ -98,3 +110,24 @@ local function updateEsp(player)
         espObjects[player].box.Visible = true
     end
 end
+
+Players.PlayerAdded:Connect(function(player)
+    if player ~= LocalPlayer then
+        createBox(player)
+    end
+end)
+Players.PlayerRemoving:Connect(function(player)
+    removeBox(player)
+end)
+for _, player in ipairs(Players:GetPlayers()) do
+    if player ~= LocalPlayer then
+        createBox(player)
+    end
+end
+RunService.RenderStepped:Connect(function()
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            updateEsp(player)
+        end
+    end
+end) 
