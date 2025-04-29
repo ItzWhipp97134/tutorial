@@ -17,7 +17,7 @@ getgenv().esp = {
 }
 ```
 > [!IMPORTANT]
-> Script is disabled by default. You must run chams.enabled = true to turn it on.
+> Script is disabled by default. You must run esp.enabled = true to turn it on.
 
 ## Example use of the Script
 ```lua
