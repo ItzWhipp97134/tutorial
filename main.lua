@@ -1,59 +1,17 @@
--- Tutorial Box ESP Script
--- Made for educational purposes
-
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local Camera = workspace.CurrentCamera
-local LocalPlayer = Players.LocalPlayer
-
--- Initialize ESP settings
-getgenv().esp = {
-    enabled = false,  -- ESP starts disabled
-    outlineColor = Color3.fromRGB(255, 255, 255),
-    fillColor = Color3.fromRGB(0, 0, 0),
-    fillTransparency = 0.5,
-    outlineTransparency = 0,
-    teamCheck = false
-}
-
--- Store our drawing objects
-local espObjects = {}
-
-local function createBox(player)
-    -- Create box components
-    local box = Drawing.new("Square")
-    local fill = Drawing.new("Square")
-    
-    -- Set default properties for fill
-    fill.Thickness = 1
-    fill.Filled = true
-    fill.Visible = false
-    fill.ZIndex = 1  -- Make fill render behind outline
-    
-    -- Set default properties for outline
-    box.Thickness = 2  -- Increased thickness for better visibility
-    box.Filled = false
-    box.Visible = false
-    box.ZIndex = 2  -- Make outline render in front
-    
-    espObjects[player] = {
-        box = box,
-        fill = fill
-    }
-end
-
-local function removeBox(player)
-    if espObjects[player] then
-        for _, drawing in pairs(espObjects[player]) do
-            if drawing then
-                drawing:Remove()
+local function getBoundingBoxCorners(model)
+    local cframe, size = model:GetBoundingBox()
+    local corners = {}
+    for x = -0.5, 0.5, 1 do
+        for y = -0.5, 0.5, 1 do
+            for z = -0.5, 0.5, 1 do
+                local world = cframe * Vector3.new(size.X * x, size.Y * y, size.Z * z)
+                table.insert(corners, world)
             end
         end
-        espObjects[player] = nil
     end
+    return corners
 end
 
--- Update ESP for a player
 local function updateEsp(player)
     if not getgenv().esp.enabled then
         if espObjects[player] then
@@ -62,7 +20,7 @@ local function updateEsp(player)
         end
         return
     end
-    
+
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then
         if espObjects[player] then
@@ -71,8 +29,7 @@ local function updateEsp(player)
         end
         return
     end
-    
-    -- Team Check
+
     if getgenv().esp.teamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
         if espObjects[player] then
             espObjects[player].box.Visible = false
@@ -80,83 +37,46 @@ local function updateEsp(player)
         end
         return
     end
-    
-    -- Get character parts
-    local hrp = character:FindFirstChild("HumanoidRootPart")
-    local head = character:FindFirstChild("Head")
-    
-    if not hrp or not head then return end
-    
-    -- Calculate box size and position
-    local hrpPos, hrpOnScreen = Camera:WorldToViewportPoint(hrp.Position)
-    if not hrpOnScreen then
+
+    -- Get all 8 corners of the bounding box
+    local corners = getBoundingBoxCorners(character)
+    local minX, minY = math.huge, math.huge
+    local maxX, maxY = -math.huge, -math.huge
+    local onScreen = false
+
+    for _, corner in ipairs(corners) do
+        local screenPos, visible = Camera:WorldToViewportPoint(corner)
+        if visible then
+            onScreen = true
+            minX = math.min(minX, screenPos.X)
+            minY = math.min(minY, screenPos.Y)
+            maxX = math.max(maxX, screenPos.X)
+            maxY = math.max(maxY, screenPos.Y)
+        end
+    end
+
+    if not onScreen then
         if espObjects[player] then
             espObjects[player].box.Visible = false
             espObjects[player].fill.Visible = false
         end
         return
     end
-    
-    -- Get character dimensions
-    local topPosition = Camera:WorldToViewportPoint((head.CFrame * CFrame.new(0, 1, 0)).Position)
-    local bottomPosition = Camera:WorldToViewportPoint((hrp.CFrame * CFrame.new(0, -3.5, 0)).Position)
-    local radius = math.abs(topPosition.Y - bottomPosition.Y) / 2
-    local size = Vector2.new(radius * 1.5, radius * 2)
-    local position = Vector2.new(hrpPos.X - size.X / 2, hrpPos.Y - size.Y / 2)
-    
-    -- Update ESP objects
+
+    local boxSize = Vector2.new(maxX - minX, maxY - minY)
+    local boxPosition = Vector2.new(minX, minY)
+
     if espObjects[player] then
-        -- Update fill
-        espObjects[player].fill.Size = size
-        espObjects[player].fill.Position = position
+        espObjects[player].fill.Size = boxSize
+        espObjects[player].fill.Position = boxPosition
         espObjects[player].fill.Color = getgenv().esp.fillColor
         espObjects[player].fill.Transparency = getgenv().esp.fillTransparency
         espObjects[player].fill.Visible = true
-        
-        -- Update outline
-        espObjects[player].box.Size = size
-        espObjects[player].box.Position = position
+
+        espObjects[player].box.Size = boxSize
+        espObjects[player].box.Position = boxPosition
         espObjects[player].box.Color = getgenv().esp.outlineColor
         espObjects[player].box.Transparency = getgenv().esp.outlineTransparency
         espObjects[player].box.Visible = true
     end
 end
-
--- Player handling
-Players.PlayerAdded:Connect(function(player)
-    if player ~= LocalPlayer then
-        createBox(player)
-    end
-end)
-
-Players.PlayerRemoving:Connect(function(player)
-    removeBox(player)
-end)
-
--- Create boxes for existing players
-for _, player in ipairs(Players:GetPlayers()) do
-    if player ~= LocalPlayer then
-        createBox(player)
-    end
-end
-
--- Update loop
-RunService.RenderStepped:Connect(function()
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
-            updateEsp(player)
-        end
-    end
-end)
-
--- Clean up on script end
-game:GetService("CoreGui").ChildRemoved:Connect(function(child)
-    if child == script then
-        for _, player in ipairs(Players:GetPlayers()) do
-            removeBox(player)
-        end
-    end
-end)
-
-print("Tutorial Box ESP loaded! Use getgenv().esp to modify settings.")
-print("Example: getgenv().esp.enabled = true") 
