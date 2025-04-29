@@ -1,3 +1,21 @@
+-- Tutorial Box ESP Script
+-- Made for educational purposes
+
+-- Ensure getgenv().esp is always defined with defaults
+getgenv().esp = getgenv().esp or {
+    enabled = false,
+    outlineColor = Color3.fromRGB(255, 255, 255),
+    fillColor = Color3.fromRGB(0, 0, 0),
+    fillTransparency = 0.5,
+    outlineTransparency = 0,
+    teamCheck = false
+}
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+local LocalPlayer = Players.LocalPlayer
+
 local function getBoundingBoxCorners(model)
     local cframe, size = model:GetBoundingBox()
     local corners = {}
