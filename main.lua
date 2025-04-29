@@ -1,21 +1,17 @@
--- Box ESP Script
--- Made for educational purposes
+-- Classic Roblox Box ESP Script
+-- Inspired by Exunys/ESP-Script and wa0101/Roblox-ESP
 
--- Ensure getgenv().esp is always defined with defaults
 getgenv().esp = getgenv().esp or {
     enabled = false,
     outlineColor = Color3.fromRGB(255, 255, 255),
-    fillColor = Color3.fromRGB(0, 0, 0),
-    fillTransparency = 1,
     outlineTransparency = 0,
-    teamCheck = false
+    teamCheck = true
 }
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
-
 local espObjects = {}
 
 local function getBoundingBoxCorners(model)
@@ -37,39 +33,39 @@ local function createBox(player)
     box.Thickness = 2
     box.Filled = false
     box.Visible = false
+    box.Color = getgenv().esp.outlineColor
+    box.Transparency = getgenv().esp.outlineTransparency
     box.ZIndex = 2
-    espObjects[player] = { box = box }
+    espObjects[player] = box
 end
 
 local function removeBox(player)
     if espObjects[player] then
-        for _, drawing in pairs(espObjects[player]) do
-            if drawing then drawing:Remove() end
-        end
+        espObjects[player]:Remove()
         espObjects[player] = nil
     end
 end
 
 local function updateEsp(player)
+    local box = espObjects[player]
+    if not box then return end
+
     if not getgenv().esp.enabled then
-        if espObjects[player] then
-            espObjects[player].box.Visible = false
-        end
+        box.Visible = false
         return
     end
+
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") or not character:FindFirstChild("Humanoid") then
-        if espObjects[player] then
-            espObjects[player].box.Visible = false
-        end
+        box.Visible = false
         return
     end
+
     if getgenv().esp.teamCheck and player.Team and LocalPlayer.Team and player.Team == LocalPlayer.Team then
-        if espObjects[player] then
-            espObjects[player].box.Visible = false
-        end
+        box.Visible = false
         return
     end
+
     local corners = getBoundingBoxCorners(character)
     local minX, minY = math.huge, math.huge
     local maxX, maxY = -math.huge, -math.huge
@@ -85,20 +81,14 @@ local function updateEsp(player)
         end
     end
     if not onScreen then
-        if espObjects[player] then
-            espObjects[player].box.Visible = false
-        end
+        box.Visible = false
         return
     end
-    local boxSize = Vector2.new(maxX - minX, maxY - minY)
-    local boxPosition = Vector2.new(minX, minY)
-    if espObjects[player] then
-        espObjects[player].box.Size = boxSize
-        espObjects[player].box.Position = boxPosition
-        espObjects[player].box.Color = getgenv().esp.outlineColor
-        espObjects[player].box.Transparency = getgenv().esp.outlineTransparency
-        espObjects[player].box.Visible = true
-    end
+    box.Size = Vector2.new(maxX - minX, maxY - minY)
+    box.Position = Vector2.new(minX, minY)
+    box.Color = getgenv().esp.outlineColor
+    box.Transparency = getgenv().esp.outlineTransparency
+    box.Visible = true
 end
 
 Players.PlayerAdded:Connect(function(player)
@@ -120,4 +110,9 @@ RunService.RenderStepped:Connect(function()
             updateEsp(player)
         end
     end
-end) 
+end)
+
+-- Example usage:
+-- getgenv().esp.enabled = true
+-- getgenv().esp.outlineColor = Color3.fromRGB(255, 0, 0) -- red box
+-- getgenv().esp.teamCheck = false -- show all players 
